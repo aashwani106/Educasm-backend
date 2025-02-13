@@ -26,7 +26,7 @@ const rateLimitHandler = (req, res, next, options) => {
 // Rate limiters with backend logging
 const minuteLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 15, // 15 requests per minute
+  max: 3, // 15 requests per minute
   message: "Too many requests, please try again later.",
   handler: rateLimitHandler,
 });
