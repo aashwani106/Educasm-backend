@@ -419,10 +419,12 @@ export default class GPTService {
   async streamExploreContent(query, userContext, onChunk) {
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
+ 
     const maxRetries = 3;
     let retryCount = 0;
 
     while (retryCount < maxRetries) {
+
       try {
         const systemPrompt = `You are a Gen-Z tutor who explains complex topics concisely for a ${userContext.age} year old.
           First provide the explanation in plain text, then provide related content in a STRICT single-line JSON format.
@@ -492,102 +494,84 @@ export default class GPTService {
 
         const response = await model.generateContent(request);
         const content = response.response.text(); // Get the entire response text
-        console.log("text is", content);
+        console.log("text", content);
 
         // Split the response into main content and JSON
         const [mainContent2, jsonContent2] = content.split("---");
-        console.log("mainContent--]", mainContent2);
-        console.log("jsonContent --]", jsonContent2);
-        let mainContent = "";
-        let jsonContent = "";
+        console.log("mainContent", mainContent2);
+        console.log("jsonContent", jsonContent2);
+
+
+
+        let mainContent = '';
+        let jsonContent = '';
         let currentTopics = [];
-        let currentQuestions = [];
+        let currentQuestions  = [];
         let isJsonSection = false;
+        
 
-        // first check if its include ---
-
-        // if( jsonContent2 && !jsonContent2.includes("---")){
-        //   console.log('is skik[')
-        //   continue
-        // }
         if (content.includes("---")) {
-          console.log("eeee", retryCount);
           isJsonSection = true;
-          console.log(
-            "====================================yess",
-            isJsonSection
-          );
-
-          // continue;
+           
         }
+        if (isJsonSection) {
 
-        if (isJsonSection == true) {
           jsonContent += content;
           try {
-            console.log("now", jsonContent2);
-
-            if (jsonContent.includes("}")) {
-              const jsonStr = jsonContent2.trim();
-              console.log("now2", jsonContent2 , 'jkh', jsonContent2[0]);
-
-              if (jsonStr.startsWith("{") && jsonStr.endsWith("}")) {
-                console.log("is hereuuuuuuuuuu");
-
-                const parsed = JSON.parse(jsonContent2);
-
+            // Try to parse complete JSON objects
+            if (jsonContent.includes('}')) {
+              const jsonStr = jsonContent.trim();
+              if (jsonStr.startsWith('{') && jsonStr.endsWith('}')) {
+                const parsed = JSON.parse(jsonStr);
+                
                 // Process topics if available
                 if (parsed.topics && Array.isArray(parsed.topics)) {
-                  parsed.topics.forEach((topic) => {
-                    if (!currentTopics.some((t) => t.topic === topic.name)) {
+                  parsed.topics.forEach((topic ) => {
+                    if (!currentTopics.some(t => t.topic === topic.name)) {
                       currentTopics.push({
                         topic: topic.name,
-                        type: topic.type,
-                        reason: topic.detail,
+                        type: topic.type, 
+                        reason: topic.detail
                       });
                     }
                   });
                 }
+
                 // Process questions if available
                 if (parsed.questions && Array.isArray(parsed.questions)) {
-                  parsed.questions.forEach((question) => {
-                    if (
-                      !currentQuestions.some(
-                        (q) => q.question === question.text
-                      )
-                    ) {
+                  parsed.questions.forEach((question ) => {
+                    if (!currentQuestions.some(q => q.question === question.text)) {
                       currentQuestions.push({
                         question: question.text,
                         type: question.type,
-                        context: question.detail,
+                        context: question.detail
                       });
                     }
                   });
                 }
+
                 // Send update with current state
                 onChunk({
-                  text: mainContent2.trim(),
+                  text: mainContent.trim(),
                   topics: currentTopics.length > 0 ? currentTopics : undefined,
-                  questions:
-                    currentQuestions.length > 0 ? currentQuestions : undefined,
+                  questions: currentQuestions.length > 0 ? currentQuestions : undefined
                 });
-              }else{
-                continue
               }
-            }else{
-              continue
             }
-          } catch (e) {
-            console.log("thi", e);
+          } catch (error) {
+            // Continue accumulating if parsing fails
+            console.debug('JSON parse error:', error);
           }
-        }else{
-          continue
+        } else {
+          mainContent += content;
+          onChunk({ 
+            text: mainContent.trim(),
+            topics: currentTopics.length > 0 ? currentTopics : undefined,
+            questions: currentQuestions.length > 0 ? currentQuestions : undefined
+          });
         }
-
-        return;
+        return
       } catch (error) {
-        console.log("====================================");
-        console.log("eeee", retryCount);
-        console.log("====================================");
         retryCount++;
         console.error(`API attempt ${retryCount} failed:`, error);
         if (retryCount === maxRetries) {
