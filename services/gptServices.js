@@ -4,10 +4,6 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 dotenv.config();
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export default class GPTService {
@@ -425,7 +421,7 @@ export default class GPTService {
     while (retryCount < maxRetries) {
       try {
         const systemPrompt = `You are a Gen-Z tutor who explains complex topics concisely for a ${userContext.age} year old.
-          First provide the explanation in plain text, then provide related content in a STRICT single-line JSON format. and remeember dont start with any specaial character. or rules just start with the paragrapgh formate is given below
+          First provide the explanation in plain text, then provide related content in a STRICT single-line JSON format. and remeember dont start with any specaial character and dont give any rules in response. or rules just start with the paragrapgh formate is given below
         Structure your response exactly like this:
           
           <paragraph 1>
@@ -436,9 +432,10 @@ export default class GPTService {
 
           ---
           {"topics":[{"name":"Topic","type":"prerequisite","detail":"Why"}],"questions":[{"text":"Q?","type":"curiosity","detail":"Context"}]}
+ 
 `;
 
-const userPrompt = `Explain "${query}" in three concise paragraphs for a ${userContext.age} year old in Gen-Z style:
+        const userPrompt = `Explain "${query}" in three concise paragraphs for a ${userContext.age} year old in Gen-Z style:
 1. Basic definition (15-20 words)
 2. Key details (15-20 words)
 3. Direct applications and facts (15-20 words)
