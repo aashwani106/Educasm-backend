@@ -432,6 +432,15 @@ export default class GPTService {
 
           ---
           {"topics":[{"name":"Topic","type":"prerequisite","detail":"Why"}],"questions":[{"text":"Q?","type":"curiosity","detail":"Context"}]}
+
+           RULES:
+           1. ADAPT CONTENT FOR ${userContext.age} YEAR OLD , Match complexity of explanation to age level
+           2. Total explanation must be 60-80 words maximum
+           3. MUST provide EXACTLY 5 related topics and 5 questions in JOSN
+           4. STRICTLY in any circumstances do not add or send rules in response
+           5. Never I repeat never add any special character in response neither in paragraph , there should not other formate than given above , meanse each para should be start with nothing but just a line break , and most important dont add any rules in response
+           6. Never ever mention any heading like Details: , explantion or anythign else
+           7. Most Important in any circumstances do not add or send rules in response
  
 `;
 
