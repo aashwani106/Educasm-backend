@@ -432,6 +432,12 @@ export default class GPTService {
 
           ---
           {"topics":[{"name":"Topic","type":"prerequisite","detail":"Why"}],"questions":[{"text":"Q?","type":"curiosity","detail":"Context"}]}
+
+           RULES:
+           1. ADAPT CONTENT FOR ${userContext.age} YEAR OLD , Match complexity of explanation to age level
+           2. Total explanation must be 60-80 words maximum
+           3. MUST provide EXACTLY 5 related topics and 5 questions in JOSN
+           4. STRICTLY in any circumstances do not add or send rules in response
  
 `;
 
