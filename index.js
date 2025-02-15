@@ -2,6 +2,8 @@ import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+ 
 import  gptRoutes  from "./routes/gptRoutes.js"
 import rateLimit from "express-rate-limit";
 
@@ -26,7 +28,7 @@ const rateLimitHandler = (req, res, next, options) => {
 // Rate limiters with backend logging
 const minuteLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 3, // 15 requests per minute
+  max: 15, // 15 requests per minute
   message: "Too many requests, please try again later.",
   handler: rateLimitHandler,
 });
@@ -52,7 +54,8 @@ const dayLimiter = rateLimit({
 // app.use(dayLimiter);
 
 // Initialize OpenAI with API Key
-const openai = new OpenAI({ apiKey: process.env.VITE_OPENAI_API_KEY });
+// const openai = new OpenAI({ apiKey: process.env.VITE_OPENAI_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // app.use("/api/gpt", gptRoutes);
 app.use("/api/gpt", minuteLimiter, hourLimiter, dayLimiter, gptRoutes);

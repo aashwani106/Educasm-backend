@@ -419,14 +419,17 @@ export default class GPTService {
   async streamExploreContent(query, userContext, onChunk) {
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
+ 
     const maxRetries = 3;
     let retryCount = 0;
 
     while (retryCount < maxRetries) {
+
       try {
         const systemPrompt = `You are a Gen-Z tutor who explains complex topics concisely for a ${userContext.age} year old.
-          First provide the explanation in plain text, then provide related content in a STRICT single-line JSON format. and remeember dont start with any specaial character. or rules just start with the paragrapgh formate is given below
-        Structure your response exactly like this:
+          First provide the explanation in plain text, then provide related content in a STRICT single-line JSON format.
+          
+          Structure your response exactly like this:
           
           <paragraph 1>
 
@@ -436,14 +439,45 @@ export default class GPTService {
 
           ---
           {"topics":[{"name":"Topic","type":"prerequisite","detail":"Why"}],"questions":[{"text":"Q?","type":"curiosity","detail":"Context"}]}
-`;
 
-const userPrompt = `Explain "${query}" in three concise paragraphs for a ${userContext.age} year old in Gen-Z style:
-1. Basic definition (15-20 words)
-2. Key details (15-20 words)
-3. Direct applications and facts (15-20 words)
+          RULES:
+          - ADAPT CONTENT FOR ${userContext.age} YEAR OLD:
+            
+            * Match complexity of explanation to age level
+            
+          - STRICT LENGTH LIMITS:
+            * Total explanation must be 60-80 words maximum
+            * Each paragraph around 20-25 words each
+            * Related questions maximum 12 words each
+            * Topic details 1-2 words each
+          - Keep paragraphs clear and simple
+          - Third paragraph should directly state applications and facts without phrases like "In real-world applications"
+          - Use "---" as separator
+          - JSON must be in a single line
+          - No line breaks in JSON
+          - MUST provide EXACTLY 5 related topics and 5 questions
+          - Related questions must be:
+            * Curiosity-driven and thought-provoking
+            * STRICTLY 8-12 words maximum
+            * Focus on mind-blowing facts or surprising connections
+            * Make users think "Wow, I never thought about that!"
+          - Related topics must be:
+            * Directly relevant to understanding the main topic
+            * Mix of prerequisites and advanced concepts
+            * Brief, clear explanation of importance
+          - Topic types: prerequisite, extension, application, parallel, deeper
+          - Question types: curiosity, mechanism, causality, innovation, insight`;
 
-Then provide 5 related topics and 5 curiosity questions in JSON format after "---".`;
+        const userPrompt = `Explain "${query}" in three very concise paragraphs for a ${userContext.age} year old in genz style:
+          1. Basic definition (15-20 words)
+          2. Key details (15-20 words)
+          3. Direct applications and facts (15-20 words)
+
+          Then provide EXACTLY:
+          - 5 related topics that help understand ${query} better (age-appropriate)
+          - 5 mind-blowing questions (8-12 words each) that spark curiosity
+          
+          Follow the format and length limits strictly.`;
 
         const request = {
           contents: [
@@ -458,111 +492,86 @@ Then provide 5 related topics and 5 curiosity questions in JSON format after "--
           ],
         };
 
-        const response = await model.generateContent(request, {
-          temperature: 0.3,
-          maxOutputTokens: 4000,
-          topK: 40,
-          stopSequences: ["\n\n---"],
-        });
+        const response = await model.generateContent(request);
         const content = response.response.text(); // Get the entire response text
-        console.log("text 1==", response.response);
-
-        console.log("text is", content);
+        console.log("text", content);
 
         // Split the response into main content and JSON
         const [mainContent2, jsonContent2] = content.split("---");
-        // console.log("mainContent--]", mainContent2);
-        // console.log("jsonContent --]", jsonContent2);
-        let mainContent = "";
-        let jsonContent = "";
+        console.log("mainContent", mainContent2);
+        console.log("jsonContent", jsonContent2);
+
+
+
+        let mainContent = '';
+        let jsonContent = '';
         let currentTopics = [];
-        let currentQuestions = [];
+        let currentQuestions  = [];
         let isJsonSection = false;
+        
 
         if (content.includes("---")) {
-          // console.log("eeee", retryCount);
           isJsonSection = true;
-          console.log(
-            // "====================================yess",
-            isJsonSection
-          );
-
-          // continue;
+           
         }
+        if (isJsonSection) {
 
-        if (isJsonSection == true) {
           jsonContent += content;
-
           try {
-            if (jsonContent.includes("}")) {
-              const jsonStr = jsonContent2.trim();
-              // console.log("now2", jsonContent2 , 'jkh', jsonContent2[0]);
-
-              if (jsonStr.startsWith("{") && jsonStr.endsWith("}")) {
-                console.log("is hereuuuuuuuuuu");
-
-                const parsed = JSON.parse(jsonContent2);
-
+            // Try to parse complete JSON objects
+            if (jsonContent.includes('}')) {
+              const jsonStr = jsonContent.trim();
+              if (jsonStr.startsWith('{') && jsonStr.endsWith('}')) {
+                const parsed = JSON.parse(jsonStr);
+                
                 // Process topics if available
                 if (parsed.topics && Array.isArray(parsed.topics)) {
-                  parsed.topics.forEach((topic) => {
-                    if (!currentTopics.some((t) => t.topic === topic.name)) {
+                  parsed.topics.forEach((topic ) => {
+                    if (!currentTopics.some(t => t.topic === topic.name)) {
                       currentTopics.push({
                         topic: topic.name,
-                        type: topic.type,
-                        reason: topic.detail,
+                        type: topic.type, 
+                        reason: topic.detail
                       });
                     }
                   });
                 }
+
                 // Process questions if available
                 if (parsed.questions && Array.isArray(parsed.questions)) {
-                  parsed.questions.forEach((question) => {
-                    if (
-                      !currentQuestions.some(
-                        (q) => q.question === question.text
-                      )
-                    ) {
+                  parsed.questions.forEach((question ) => {
+                    if (!currentQuestions.some(q => q.question === question.text)) {
                       currentQuestions.push({
                         question: question.text,
                         type: question.type,
-                        context: question.detail,
+                        context: question.detail
                       });
                     }
                   });
                 }
+
                 // Send update with current state
-                // console.log('mainContent2', mainContent2);
                 onChunk({
-                  text: mainContent2.replace(/<\/?a>/g, "").trim(),
+                  text: mainContent.trim(),
                   topics: currentTopics.length > 0 ? currentTopics : undefined,
-                  questions:
-                    currentQuestions.length > 0 ? currentQuestions : undefined,
+                  questions: currentQuestions.length > 0 ? currentQuestions : undefined
                 });
-              } else {
-                continue;
               }
-            } else {
-              continue;
             }
-          } catch (e) {
-            console.log("thi", e);
+          } catch (error) {
+            // Continue accumulating if parsing fails
+            console.debug('JSON parse error:', error);
           }
         } else {
           mainContent += content;
-          onChunk({
-            text: mainContent2.replace(/<\/?a>/g, "").trim(),
+          onChunk({ 
+            text: mainContent.trim(),
             topics: currentTopics.length > 0 ? currentTopics : undefined,
-            questions:
-              currentQuestions.length > 0 ? currentQuestions : undefined,
+            questions: currentQuestions.length > 0 ? currentQuestions : undefined
           });
         }
-
-        return;
+        return
       } catch (error) {
-        console.log("====================================");
-        console.log("eeee", retryCount);
-        console.log("====================================");
         retryCount++;
         console.error(`API attempt ${retryCount} failed:`, error);
         if (retryCount === maxRetries) {

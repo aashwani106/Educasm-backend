@@ -53,7 +53,7 @@ router.post("/streamExploreContent", async (req, res) => {
 
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Transfer-Encoding", "chunked");
-
+    console.log("Request received for streamExploreContent");
     await gptService.streamExploreContent(query, userContext, (chunk) => {
       res.write(JSON.stringify(chunk) + "\n"); // Send each chunk
     });
